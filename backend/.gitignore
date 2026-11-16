@@ -1,0 +1,7 @@
+node_modules/
+.env
+.whatsapp_auth/
+private/payment-receipts/
+uploads/*
+!uploads/.gitkeep
+npm-debug.log*

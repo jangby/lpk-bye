@@ -1,0 +1,11 @@
+node_modules/
+**/.env
+**/.env.*
+!**/.env.example
+**/dist/
+backend/.whatsapp_auth/
+backend/private/payment-receipts/
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/eng.traineddata
+npm-debug.log*
