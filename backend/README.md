@@ -4,6 +4,8 @@ Backend Express.js dan MySQL untuk landing page serta sistem pendaftaran peserta
 
 Untuk kontrak API lengkap beserta contoh respons JSON dan rancangan landing page, lihat [API_DESIGN_DOCUMENTATION.md](./API_DESIGN_DOCUMENTATION.md).
 
+Untuk instalasi produksi di VPS Ubuntu dengan Nginx, MySQL, domain, HTTPS, backup, dan prosedur update, lihat [DEPLOYMENT_UBUNTU.md](../DEPLOYMENT_UBUNTU.md).
+
 ## Persyaratan
 
 - Node.js 20 atau lebih baru
