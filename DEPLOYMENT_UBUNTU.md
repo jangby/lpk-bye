@@ -97,13 +97,15 @@ CREATE DATABASE db_lpk_bye
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-CREATE USER 'lpk_bye'@'127.0.0.1'
+CREATE USER 'lpk_bye'@'localhost'
   IDENTIFIED BY 'GANTI_PASSWORD_DATABASE_KUAT';
 
-GRANT ALL PRIVILEGES ON db_lpk_bye.* TO 'lpk_bye'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON db_lpk_bye.* TO 'lpk_bye'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
+
+Karena backend memakai `DB_SOCKET`, koneksi MariaDB berasal melalui Unix socket dan harus memakai akun `'lpk_bye'@'localhost'`. Akun `'lpk_bye'@'127.0.0.1'` adalah akun berbeda yang digunakan untuk koneksi TCP.
 
 Jangan gunakan akun MySQL `root` dari aplikasi.
 

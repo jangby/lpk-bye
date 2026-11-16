@@ -8,7 +8,7 @@ exports.list = async (req, res, next) => {
     const where = status ? 'WHERE p.status = ?' : '';
     const params = status ? [status] : [];
     const [payments] = await pool.execute(
-      `SELECT p.*, r.full_name, r.whatsapp, r.registration_code, b.batch_name, r.training_fee,
+      `SELECT p.*, r.full_name, r.whatsapp, r.registration_code, r.program_type, b.batch_name, r.training_fee,
         (SELECT COALESCE(SUM(paid.amount_approved), 0) FROM payments paid
          WHERE paid.registrant_id = r.id AND paid.status = 'approved') AS paid_total
        FROM payments p
@@ -64,8 +64,8 @@ async function deliverReviewNotification(paymentId, payment) {
   const amount = new Intl.NumberFormat('id-ID').format(Number(payment.amount_approved || 0));
   const remaining = Math.max(0, Number(summary?.training_fee || 0) - Number(summary?.paid_total || 0));
   const text = approved
-    ? `Pembayaran cicilan Rp${amount} untuk ${payment.registration_code} telah diverifikasi. Total terbayar Rp${new Intl.NumberFormat('id-ID').format(Number(summary?.paid_total || 0))}; sisa biaya pelatihan Rp${new Intl.NumberFormat('id-ID').format(remaining)}. Terima kasih.`
-    : `Bukti pembayaran untuk ${payment.registration_code} belum dapat kami verifikasi. Alasan: ${payment.rejection_reason}. Silakan perbaiki dan kirim ulang bukti transfer.`;
+    ? `Pembayaran cicilan Rp${amount} untuk program ${payment.program_type} (${payment.registration_code}) telah diverifikasi. Total terbayar Rp${new Intl.NumberFormat('id-ID').format(Number(summary?.paid_total || 0))}; sisa biaya pelatihan Rp${new Intl.NumberFormat('id-ID').format(remaining)}. Terima kasih.`
+    : `Bukti pembayaran untuk program ${payment.program_type} (${payment.registration_code}) belum dapat kami verifikasi. Alasan: ${payment.rejection_reason}. Silakan perbaiki dan kirim ulang bukti transfer.`;
 
   try {
     await sendWhatsAppMessage(payment.whatsapp, text);
@@ -97,7 +97,7 @@ exports.review = async (req, res, next) => {
 
     await connection.beginTransaction();
     const [[payment]] = await connection.execute(
-      `SELECT p.*, r.whatsapp, r.registration_code
+      `SELECT p.*, r.whatsapp, r.registration_code, r.program_type
        FROM payments p JOIN registrants r ON r.id = p.registrant_id
        WHERE p.id = ? FOR UPDATE`,
       [req.params.paymentId]
@@ -140,7 +140,7 @@ exports.review = async (req, res, next) => {
 exports.retryNotification = async (req, res, next) => {
   try {
     const [[payment]] = await pool.execute(
-      `SELECT p.*, r.whatsapp, r.registration_code
+      `SELECT p.*, r.whatsapp, r.registration_code, r.program_type
        FROM payments p JOIN registrants r ON r.id = p.registrant_id
        WHERE p.id = ?`,
       [req.params.paymentId]

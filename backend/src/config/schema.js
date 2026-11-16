@@ -11,18 +11,46 @@ module.exports = [
   `CREATE TABLE IF NOT EXISTS batches (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     batch_name VARCHAR(150) NOT NULL,
-    program_type VARCHAR(100) NOT NULL DEFAULT 'Bahasa Jepang',
+    program_type VARCHAR(100) NOT NULL DEFAULT 'PELATIHAN BAHASA JEPANG',
     description TEXT,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     quota INT UNSIGNED NOT NULL DEFAULT 0,
-    training_fee DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0,
+    training_fee DECIMAL(12,2) UNSIGNED NULL DEFAULT NULL,
     payment_instructions TEXT,
     is_active TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_batch_active (is_active),
     INDEX idx_batch_dates (start_date, end_date)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS site_settings (
+    id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+    logo_url VARCHAR(500),
+    faqs_initialized TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS landing_slides (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(180),
+    caption VARCHAR(500),
+    image_url VARCHAR(500) NOT NULL,
+    link_url VARCHAR(500),
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_landing_slides_active_order (is_active, sort_order, id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS landing_faqs (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    question VARCHAR(255) NOT NULL,
+    answer TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_landing_faqs_active_order (is_active, sort_order, id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS form_fields (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -42,6 +70,7 @@ module.exports = [
   `CREATE TABLE IF NOT EXISTS registrants (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     batch_id INT UNSIGNED NOT NULL,
+    program_type VARCHAR(100) NOT NULL DEFAULT '',
     training_fee DECIMAL(12,2) UNSIGNED NOT NULL DEFAULT 0,
     full_name VARCHAR(150) NOT NULL,
     whatsapp VARCHAR(20) NOT NULL,

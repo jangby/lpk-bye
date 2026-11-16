@@ -16,29 +16,40 @@ exports.activeBatch = async (req, res, next) => {
     const [batches] = await pool.execute(
       `SELECT id, batch_name, program_type, description, start_date, end_date, quota, training_fee, is_active
        FROM batches WHERE is_active = TRUE AND CURDATE() BETWEEN start_date AND end_date
-       ORDER BY start_date DESC LIMIT 1`
+       ORDER BY start_date DESC, created_at DESC`
     );
     if (!batches.length) return res.status(404).json({ success: false, message: 'Belum ada gelombang aktif' });
 
-    const batch = batches[0];
-    const [fields] = await pool.execute(
-      `SELECT id, field_name, field_label, field_type, options, is_required, order_index
-       FROM form_fields WHERE batch_id = ? ORDER BY order_index, id`,
-      [batch.id]
+    const batchIds = batches.map((batch) => batch.id);
+    const placeholders = batchIds.map(() => '?').join(', ');
+    const [fieldRows] = await pool.execute(
+      `SELECT id, batch_id, field_name, field_label, field_type, options, is_required, order_index
+       FROM form_fields WHERE batch_id IN (${placeholders}) ORDER BY batch_id, order_index, id`,
+      batchIds
     );
-    fields.forEach((field) => { field.options = parseJson(field.options, null); });
-
-    const bot = getWhatsAppStatus();
+    const [registrantCounts] = await pool.execute(
+      `SELECT batch_id, COUNT(*) AS registrant_count FROM registrants
+       WHERE batch_id IN (${placeholders}) GROUP BY batch_id`,
+      batchIds
+    );
+    const counts = new Map(registrantCounts.map((row) => [Number(row.batch_id), Number(row.registrant_count)]));
+    const fieldsByBatch = new Map(batches.map((batch) => [Number(batch.id), []]));
+    for (const field of fieldRows) {
+      field.options = parseJson(field.options, null);
+      fieldsByBatch.get(Number(field.batch_id)).push(field);
+    }
     res.json({
       success: true,
       data: {
-        batch,
-        fields,
-        payment: {
-          training_fee: Number(batch.training_fee || 0),
-          bot_phone: bot.connected ? bot.phone : null,
-          bot_connected: bot.connected
-        }
+        batches: batches.map((batch) => {
+          const registrantCount = counts.get(Number(batch.id)) || 0;
+          return {
+            ...batch,
+            registrant_count: registrantCount,
+            is_full: batch.quota > 0 && registrantCount >= batch.quota,
+            fields: fieldsByBatch.get(Number(batch.id))
+          };
+        })
       }
     });
   } catch (error) { next(error); }
@@ -56,7 +67,7 @@ exports.register = async (req, res, next) => {
 
     await connection.beginTransaction();
     const [[batch]] = await connection.execute(
-      `SELECT id, quota, training_fee, payment_instructions, start_date, end_date, is_active
+      `SELECT id, batch_name, program_type, quota, training_fee, payment_instructions, start_date, end_date, is_active
        FROM batches WHERE id = ? FOR UPDATE`,
       [batchId]
     );
@@ -69,6 +80,9 @@ exports.register = async (req, res, next) => {
     );
     if (!in_period) {
       throw Object.assign(new Error('Gelombang sudah selesai atau belum dibuka'), { status: 404 });
+    }
+    if (batch.training_fee == null) {
+      throw Object.assign(new Error('Biaya gelombang ini belum ditetapkan'), { status: 409 });
     }
     const [[{ registered }]] = await connection.execute(
       'SELECT COUNT(*) AS registered FROM registrants WHERE batch_id = ?',
@@ -107,11 +121,12 @@ exports.register = async (req, res, next) => {
       try {
         [result] = await connection.execute(
           `INSERT INTO registrants
-           (batch_id, training_fee, full_name, whatsapp, email, registration_code, portal_token_hash)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+           (batch_id, program_type, training_fee, full_name, whatsapp, email, registration_code, portal_token_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             batchId,
-            batch.training_fee || 0,
+            batch.program_type,
+            batch.training_fee,
             req.body.full_name.trim(),
             req.body.whatsapp.trim(),
             req.body.email || null,
@@ -144,9 +159,10 @@ exports.register = async (req, res, next) => {
         full_name: req.body.full_name.trim(),
         registration_code: code,
         batch_name: batch.batch_name,
+        program_type: batch.program_type,
         start_date: batch.start_date,
         end_date: batch.end_date,
-        training_fee: batch.training_fee || 0,
+        training_fee: batch.training_fee,
         payment_instructions: batch.payment_instructions || ''
       }, portalUrl));
       await pool.execute(
@@ -172,6 +188,8 @@ exports.register = async (req, res, next) => {
       message: 'Pendaftaran berhasil',
       data: {
         registration_code: code,
+        batch_name: batch.batch_name,
+        program_type: batch.program_type,
         portal_url: portalUrl,
         notification: {
           status: notificationStatus,
@@ -181,7 +199,7 @@ exports.register = async (req, res, next) => {
         },
         whatsapp_url: whatsappUrl(code, req.body.full_name.trim()),
         payment: {
-          training_fee: Number(batch.training_fee || 0),
+          training_fee: batch.training_fee,
           bot_phone: bot.connected ? bot.phone : null
         }
       }
@@ -200,7 +218,7 @@ exports.participantPortal = async (req, res, next) => {
     const tokenHash = hashPortalToken(req.params.token);
     const [[registrant]] = await pool.execute(
       `SELECT r.id, r.full_name, r.registration_code, r.status, r.participant_feedback,
-        r.training_fee, r.created_at, b.batch_name, b.program_type, b.description,
+        r.program_type, r.training_fee, r.created_at, b.batch_name, b.description,
         b.start_date, b.end_date, b.payment_instructions,
         COALESCE(SUM(CASE WHEN p.status = 'approved' THEN p.amount_approved ELSE 0 END), 0) AS paid_total
        FROM registrants r

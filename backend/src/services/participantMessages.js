@@ -16,7 +16,8 @@ function buildWelcomeMessage(registrant, portalUrl) {
   const lines = [
     `Halo ${registrant.full_name}, terima kasih sudah mendaftar di LPK BYE!`,
     `Kode pendaftaran: ${registrant.registration_code}`,
-    `Program: ${registrant.batch_name}`,
+    `Program: ${registrant.program_type || registrant.batch_name}`,
+    `Gelombang: ${registrant.batch_name}`,
     `Periode pelatihan: ${formatDate(registrant.start_date)} - ${formatDate(registrant.end_date)}`,
     `Status saat ini: menunggu verifikasi admin.`
   ];
@@ -50,7 +51,7 @@ function buildStatusMessage(registrant) {
   } else if (registrant.status === 'verified') {
     lines.push(`Selamat ${registrant.full_name}! Pendaftaran ${registrant.registration_code} sudah diverifikasi.`);
   } else if (registrant.status === 'accepted') {
-    lines.push(`Selamat ${registrant.full_name}! Kamu diterima pada program ${registrant.batch_name}.`);
+    lines.push(`Selamat ${registrant.full_name}! Kamu diterima pada program ${registrant.program_type || registrant.batch_name}.`);
   } else {
     lines.push(`Halo ${registrant.full_name}, status pendaftaran ${registrant.registration_code} saat ini menunggu verifikasi admin.`);
   }

@@ -47,15 +47,25 @@ exports.listBatches = async (req, res, next) => {
 exports.createBatch = async (req, res, next) => {
   try {
     const {
-      batch_name, program_type = 'Bahasa Jepang', description, start_date, end_date,
-      quota = 0, training_fee = 0, payment_instructions = null, is_active = false
+      batch_name, program_type, description, start_date, end_date,
+      quota = 0, training_fee = null, payment_instructions = null, is_active = false
     } = req.body;
     if (end_date < start_date) return res.status(422).json({ success: false, message: 'Tanggal selesai tidak boleh sebelum tanggal mulai' });
     const [result] = await pool.execute(
       `INSERT INTO batches
        (batch_name, program_type, description, start_date, end_date, quota, training_fee, payment_instructions, is_active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [batch_name, program_type, description || null, start_date, end_date, quota, training_fee, payment_instructions, is_active]
+      [
+        batch_name,
+        program_type,
+        description || null,
+        start_date,
+        end_date,
+        quota,
+        training_fee,
+        payment_instructions,
+        is_active
+      ]
     );
     res.status(201).json({ success: true, data: { id: result.insertId } });
   } catch (error) { next(error); }
@@ -65,9 +75,9 @@ exports.updateBatch = async (req, res, next) => {
   try {
     const allowed = ['batch_name', 'program_type', 'description', 'start_date', 'end_date', 'quota', 'training_fee', 'payment_instructions', 'is_active'];
     const entries = Object.entries(req.body).filter(([key]) => allowed.includes(key));
-    if (!entries.length) return res.status(422).json({ success: false, message: 'Tidak ada data yang diperbarui' });
     const fields = entries.map(([key]) => `${key} = ?`);
     const values = entries.map(([, value]) => value);
+    if (!fields.length) return res.status(422).json({ success: false, message: 'Tidak ada data yang diperbarui' });
     const [result] = await pool.execute(`UPDATE batches SET ${fields.join(', ')} WHERE id = ?`, [...values, req.params.batchId]);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Batch tidak ditemukan' });
     res.json({ success: true, message: 'Batch berhasil diperbarui' });
@@ -134,7 +144,7 @@ exports.deleteField = async (req, res, next) => {
 exports.registrants = async (req, res, next) => {
   try {
     const [registrants] = await pool.execute(
-      `SELECT r.id, r.batch_id, r.training_fee, r.full_name, r.whatsapp, r.email,
+      `SELECT r.id, r.batch_id, r.program_type, r.training_fee, b.batch_name, r.full_name, r.whatsapp, r.email,
        r.registration_code, r.status, r.notes, r.participant_feedback,
        r.welcome_notification_status, r.welcome_notification_error,
        r.status_notification_status, r.status_notification_error, r.created_at, r.updated_at,

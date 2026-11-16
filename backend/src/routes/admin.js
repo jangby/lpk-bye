@@ -5,6 +5,9 @@ const requireAdmin = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
 const paymentsController = require('../controllers/paymentsController');
 const whatsappController = require('../controllers/whatsappController');
+const siteContentController = require('../controllers/siteContentController');
+const imageUpload = require('../middleware/imageUpload');
+const { PROGRAM_NAMES } = require('../utils/batchPrograms');
 
 const router = express.Router();
 
@@ -18,15 +21,72 @@ router.post('/auth/login',
 router.use(requireAdmin);
 router.get('/me', adminController.me);
 
+router.get('/site-content', siteContentController.adminContent);
+router.put('/site-content/logo',
+  imageUpload.single('logo'),
+  siteContentController.updateLogo
+);
+router.delete('/site-content/logo', siteContentController.resetLogo);
+router.post('/landing-slides',
+  imageUpload.single('image'),
+  body('title').optional({ checkFalsy: true }).isLength({ max: 180 }),
+  body('caption').optional({ checkFalsy: true }).isLength({ max: 500 }),
+  body('link_url').optional({ checkFalsy: true }).custom((value) =>
+    (value.startsWith('/') && !value.startsWith('//')) || /^https?:\/\//i.test(value)),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.createSlide
+);
+router.patch('/landing-slides/:slideId',
+  param('slideId').isInt({ min: 1 }),
+  imageUpload.single('image'),
+  body('title').optional({ checkFalsy: true }).isLength({ max: 180 }),
+  body('caption').optional({ checkFalsy: true }).isLength({ max: 500 }),
+  body('link_url').optional({ checkFalsy: true }).custom((value) =>
+    (value.startsWith('/') && !value.startsWith('//')) || /^https?:\/\//i.test(value)),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.updateSlide
+);
+router.delete('/landing-slides/:slideId',
+  param('slideId').isInt({ min: 1 }),
+  validate,
+  siteContentController.deleteSlide
+);
+router.post('/landing-faqs',
+  body('question').trim().isLength({ min: 5, max: 255 }),
+  body('answer').trim().isLength({ min: 5, max: 5000 }),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.createFaq
+);
+router.patch('/landing-faqs/:faqId',
+  param('faqId').isInt({ min: 1 }),
+  body('question').optional().trim().isLength({ min: 5, max: 255 }),
+  body('answer').optional().trim().isLength({ min: 5, max: 5000 }),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.updateFaq
+);
+router.delete('/landing-faqs/:faqId',
+  param('faqId').isInt({ min: 1 }),
+  validate,
+  siteContentController.deleteFaq
+);
+
 router.get('/dashboard', adminController.dashboard);
 router.get('/batches', adminController.listBatches);
 router.post('/batches',
   body('batch_name').trim().isLength({ min: 3, max: 150 }),
-  body('program_type').optional().trim().isLength({ max: 100 }),
+  body('program_type').isIn(PROGRAM_NAMES),
   body('start_date').isISO8601(),
   body('end_date').isISO8601(),
   body('quota').optional().isInt({ min: 0 }),
-  body('training_fee').optional().isFloat({ min: 0, max: 9999999999.99 }),
+  body('training_fee').optional({ nullable: true }).isFloat({ min: 0, max: 9999999999.99 }),
   body('payment_instructions').optional().isLength({ max: 5000 }),
   body('is_active').optional().isBoolean(),
   validate,
@@ -34,7 +94,8 @@ router.post('/batches',
 );
 router.patch('/batches/:batchId',
   param('batchId').isInt({ min: 1 }),
-  body('training_fee').optional().isFloat({ min: 0, max: 9999999999.99 }),
+  body('program_type').optional().isIn(PROGRAM_NAMES),
+  body('training_fee').optional({ nullable: true }).isFloat({ min: 0, max: 9999999999.99 }),
   validate,
   adminController.updateBatch
 );

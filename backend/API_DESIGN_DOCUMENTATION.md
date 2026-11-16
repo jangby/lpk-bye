@@ -61,9 +61,9 @@ Respons `200`:
 }
 ```
 
-### 2.2 Ambil Batch Aktif dan Field Dinamis
+### 2.2 Ambil Semua Gelombang Aktif dan Field Dinamis
 
-Digunakan pada hero landing page dan form pendaftaran.
+Setiap gelombang hanya terkait dengan satu program. Respons dapat memuat gelombang dari kedua program secara bersamaan.
 
 ```text
 GET /api/public/batch-active
@@ -75,69 +75,31 @@ Respons `200`:
 {
   "success": true,
   "data": {
-    "batch": {
-      "id": 1,
-      "batch_name": "Gelombang 1 - Bahasa Jepang Pemula (N5)",
-      "program_type": "Bahasa Jepang",
-      "description": "Persiapan dasar bahasa Jepang untuk kebutuhan magang dan kerja di Jepang.",
-      "start_date": "2026-01-01",
-      "end_date": "2026-12-31",
-      "quota": 30,
-      "training_fee": 3500000,
-      "is_active": 1
-    },
-    "fields": [
+    "batches": [
       {
         "id": 1,
-        "field_name": "pendidikan_terakhir",
-        "field_label": "Pendidikan Terakhir",
-        "field_type": "select",
-        "options": ["SD", "SMP", "SMA/SMK", "D3", "S1"],
-        "is_required": 1,
-        "order_index": 1
-      },
-      {
-        "id": 2,
-        "field_name": "tanggal_lahir",
-        "field_label": "Tanggal Lahir",
-        "field_type": "date",
-        "options": null,
-        "is_required": 1,
-        "order_index": 2
-      },
-      {
-        "id": 3,
-        "field_name": "alamat",
-        "field_label": "Alamat Lengkap",
-        "field_type": "textarea",
-        "options": null,
-        "is_required": 1,
-        "order_index": 3
-      },
-      {
-        "id": 4,
-        "field_name": "motivasi",
-        "field_label": "Motivasi Mengikuti Kelas",
-        "field_type": "textarea",
-        "options": null,
-        "is_required": 1,
-        "order_index": 4
-      },
-      {
-        "id": 5,
-        "field_name": "foto_identitas",
-        "field_label": "Foto/Scan Identitas",
-        "field_type": "file",
-        "options": null,
-        "is_required": 0,
-        "order_index": 5
+        "batch_name": "Gelombang 1 - Pelatihan Bahasa Jepang",
+        "program_type": "PELATIHAN BAHASA JEPANG",
+        "start_date": "2026-01-01",
+        "end_date": "2026-12-31",
+        "quota": 30,
+        "training_fee": 3500000,
+        "registrant_count": 4,
+        "is_full": false,
+        "fields": [
+          {
+            "id": 1,
+            "batch_id": 1,
+            "field_name": "pendidikan_terakhir",
+            "field_label": "Pendidikan Terakhir",
+            "field_type": "select",
+            "options": ["SD", "SMP", "SMA/SMK", "D3", "S1"],
+            "is_required": 1,
+            "order_index": 1
+          }
+        ]
       }
-    ],
-    "payment": {
-      "training_fee": 3500000,
-      "bot_phone": null,
-      "bot_connected": false
-    }
+    ]
   }
 }
 ```
@@ -150,6 +112,30 @@ Respons `404` jika tidak ada gelombang aktif:
   "message": "Belum ada gelombang aktif"
 }
 ```
+
+### 2.3 Konten Landing Page
+
+Konten publik landing page diambil dari endpoint berikut:
+
+```text
+GET /api/public/site-content
+```
+
+Respons `data` berisi `logo_url`, `slides` aktif, dan FAQ aktif. Poster diurutkan dengan `sort_order` dan memiliki `image_url`, judul, keterangan, serta tautan opsional.
+
+Endpoint berikut memerlukan autentikasi admin:
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| `GET` | `/api/admin/site-content` | Memuat seluruh poster, FAQ, dan logo untuk admin |
+| `PUT` | `/api/admin/site-content/logo` | Mengganti logo, multipart field `logo` |
+| `DELETE` | `/api/admin/site-content/logo` | Memulihkan logo bawaan |
+| `POST` | `/api/admin/landing-slides` | Menambah poster, multipart field `image` |
+| `PATCH` / `DELETE` | `/api/admin/landing-slides/:slideId` | Mengubah atau menghapus poster |
+| `POST` | `/api/admin/landing-faqs` | Menambah FAQ |
+| `PATCH` / `DELETE` | `/api/admin/landing-faqs/:faqId` | Mengubah atau menghapus FAQ |
+
+Gambar poster dan logo menerima JPG, PNG, atau WEBP maksimal 8 MB.
 
 ### Mapping tipe field ke UI
 
@@ -164,7 +150,7 @@ Respons `404` jika tidak ada gelombang aktif:
 | `textarea` | Textarea |
 | `file` | File uploader JPG, PNG, atau PDF |
 
-### 2.3 Kirim Pendaftaran
+### 2.4 Kirim Pendaftaran
 
 ```text
 POST /api/public/register
@@ -222,6 +208,8 @@ Respons sukses `201`:
   "success": true,
   "message": "Pendaftaran berhasil",
   "data": {
+    "batch_name": "Gelombang 1 - Pelatihan Bahasa Jepang",
+    "program_type": "PELATIHAN BAHASA JEPANG",
     "registration_code": "BYE-JPN-2026-966975",
     "portal_url": "http://localhost:5173/peserta/opaque-secret-token",
     "notification": {
@@ -272,7 +260,7 @@ Respons validasi:
 }
 ```
 
-### 2.4 Portal Peserta
+### 2.5 Portal Peserta
 
 ```text
 GET /api/public/portal/:token
@@ -873,9 +861,10 @@ background, coral sebagai accent, dan hijau WhatsApp untuk CTA.
 Gunakan typography Plus Jakarta Sans atau Sora. Border radius 16-24 px.
 Buat frame desktop 1440px dan mobile 390px.
 
-Susun header sticky, hero, card batch aktif, tentang LPK, statistik,
-program Bahasa Jepang, keunggulan, alur pendaftaran, form pendaftaran,
-testimoni, FAQ, CTA akhir, dan footer.
+Susun landing page editorial dan elegan dengan hero imersif yang memakai
+poster kampanye bergantian, kontrol slide, kartu gelombang aktif, profil
+LPK BYE, program, keunggulan, alur pendaftaran, testimoni, FAQ dinamis,
+CTA akhir, dan footer. Poster kampanye, FAQ, serta logo dikelola admin.
 
 Hero judulnya: "Wujudkan Karier Jepang Bersama LPK BYE".
 Form harus menampilkan nama lengkap, WhatsApp, email, lalu field dinamis.
@@ -884,7 +873,7 @@ Select dan radio memakai array options. Field required menampilkan tanda *.
 Modal sukses menampilkan kode registrasi dan tombol Konfirmasi via WhatsApp.
 
 API landing page:
-GET /api/public/batch-active mengembalikan { batch, fields }.
+GET /api/public/batch-active mengembalikan `{ batches }`; setiap gelombang memiliki `program_type`, kuota, biaya, dan field dinamisnya sendiri. POST `/api/public/register` menerima `batch_id` yang dipilih peserta.
 POST /api/public/register memakai multipart/form-data dan mengembalikan
 { registration_code, whatsapp_url }.
 ```

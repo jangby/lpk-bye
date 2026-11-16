@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
 function registrationCode(year = new Date().getFullYear()) {
-  return `BYE-JPN-${year}-${crypto.randomInt(100000, 999999)}`;
+  return `BYE-${year}-${crypto.randomInt(100000, 999999)}`;
 }
 
 function whatsappUrl(registrationCode, fullName) {

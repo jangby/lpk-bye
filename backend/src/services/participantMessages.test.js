@@ -7,11 +7,13 @@ test('welcome message includes registration, payment, and participant portal det
     full_name: 'Ayu',
     registration_code: 'BYE-JPN-2026-123456',
     batch_name: 'Gelombang N5',
+    program_type: 'PELATIHAN BAHASA JEPANG',
     training_fee: 1500000,
     payment_instructions: 'Transfer ke rekening LPK BYE'
   }, 'https://lpkbye.id/peserta/token');
 
   assert.match(message, /BYE-JPN-2026-123456/);
+  assert.match(message, /Program: PELATIHAN BAHASA JEPANG/);
   assert.match(message, /Rp1\.500\.000/);
   assert.match(message, /https:\/\/lpkbye\.id\/peserta\/token/);
   assert.match(message, /tunggu verifikasi pendaftaran sebelum melakukan transfer/);

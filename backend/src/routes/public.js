@@ -5,6 +5,7 @@ const fs = require('fs');
 const { body, param } = require('express-validator');
 const validate = require('../middleware/validate');
 const publicController = require('../controllers/publicController');
+const siteContentController = require('../controllers/siteContentController');
 
 const router = express.Router();
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || 'uploads');
@@ -27,6 +28,7 @@ const upload = multer({
 
 router.get('/health', publicController.health);
 router.get('/batch-active', publicController.activeBatch);
+router.get('/site-content', siteContentController.publicContent);
 router.get('/portal/:token',
   param('token').matches(/^[A-Za-z0-9_-]{43}$/),
   validate,

@@ -68,7 +68,7 @@ async function findRegistrant(senderPhone, messageText) {
   const suffix = senderPhone.slice(-suffixLength);
   const [rows] = await pool.execute(
     `SELECT r.id, r.full_name, r.whatsapp, r.registration_code, r.batch_id, r.status, r.portal_token_hash,
-       r.participant_feedback, r.training_fee, b.batch_name, b.program_type, b.start_date,
+       r.participant_feedback, r.training_fee, r.program_type, b.batch_name, b.start_date,
        b.end_date, b.payment_instructions
      FROM registrants r JOIN batches b ON b.id = r.batch_id
      WHERE RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(r.whatsapp, '+', ''), ' ', ''), '-', ''), '(', ''), ')', ''), ?) = ?
@@ -76,7 +76,7 @@ async function findRegistrant(senderPhone, messageText) {
     [suffixLength, suffix]
   );
   const matches = rows.filter((row) => normalizePhone(row.whatsapp) === senderPhone);
-  const registrationCode = messageText.match(/BYE-JPN-\d{4}-\d{6}/i)?.[0];
+  const registrationCode = messageText.match(/BYE-(?:JPN-)?\d{4}-\d{6}/i)?.[0];
   if (registrationCode) {
     const byCode = matches.filter((row) => row.registration_code.toLowerCase() === registrationCode.toLowerCase());
     if (byCode.length === 1) return byCode[0];
@@ -121,7 +121,7 @@ async function handleTextCommand(message, jid, text) {
   if (!registrant) {
     await sendChatText(
       jid,
-      'Data pendaftar belum ditemukan untuk nomor ini atau ada lebih dari satu pendaftar. Gunakan nomor WhatsApp yang terdaftar dan sertakan kode BYE-JPN-... setelah perintah. Ketik MENU untuk bantuan.'
+      'Data pendaftar belum ditemukan untuk nomor ini atau ada lebih dari satu pendaftar. Gunakan nomor WhatsApp yang terdaftar dan sertakan kode BYE-... setelah perintah. Ketik MENU untuk bantuan.'
     );
     return;
   }
@@ -223,7 +223,7 @@ async function handleIncomingMessage(message) {
   if (!registrant) {
     await sendChatText(
       jid,
-      'Nomor ini belum cocok dengan satu data pendaftar. Gunakan nomor WhatsApp yang terdaftar dan sertakan kode pendaftaran (BYE-JPN-...) pada keterangan foto jika nomor dipakai lebih dari satu pendaftar.'
+      'Nomor ini belum cocok dengan satu data pendaftar. Gunakan nomor WhatsApp yang terdaftar dan sertakan kode pendaftaran (BYE-...) pada keterangan foto jika nomor dipakai lebih dari satu pendaftar.'
     );
     return;
   }
