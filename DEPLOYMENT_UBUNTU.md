@@ -125,6 +125,7 @@ PORT=5000
 NODE_ENV=production
 DB_HOST=127.0.0.1
 DB_PORT=3306
+DB_SOCKET=/run/mysqld/mysqld.sock
 DB_NAME=db_lpk_bye
 DB_USER=lpk_bye
 DB_PASSWORD=GANTI_PASSWORD_DATABASE_KUAT
@@ -424,6 +425,7 @@ Jika kernel atau layanan penting diperbarui, jadwalkan restart VPS dan periksa k
 | Frontend tampil tetapi API gagal | Periksa `VITE_API_URL` kosong, blok `location /api/`, `CORS_ORIGIN`, backend, dan `curl https://example.com/api/public/health`. |
 | Backend gagal mulai | Periksa `.env`, izin file, koneksi MySQL, `sudo journalctl -u lpk-bye -n 100 --no-pager`, serta status `mysql`. |
 | Migrasi gagal | Backup database, baca pesan error, pastikan user MySQL memiliki hak pada `db_lpk_bye`, lalu ulangi hanya setelah penyebabnya diperbaiki. |
+| Klien MariaDB berhasil tetapi koneksi Node.js melalui TCP ditolak | Untuk MariaDB lokal, set `DB_SOCKET=/run/mysqld/mysqld.sock` di `.env`, jalankan ulang migrasi, lalu restart backend. `DB_SOCKET` mengutamakan Unix socket dibanding `DB_HOST`/`DB_PORT`. |
 | QR WhatsApp tidak muncul atau bot offline | Periksa log backend, izin direktori `.whatsapp_auth`, koneksi internet VPS, dan status perangkat tertaut di WhatsApp. |
 | Disk hampir penuh | Periksa ukuran log, backup, unggahan, dan bukti pembayaran; arsipkan/hapus hanya setelah kebijakan retensi dan backup dipastikan. |
 
