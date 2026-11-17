@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('../config/env');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 const { PROGRAM_NAMES } = require('../utils/batchPrograms');

@@ -167,7 +167,7 @@ router.patch('/registrants/:registrantId/status',
 );
 router.post('/registrants/:registrantId/notify',
   param('registrantId').isInt({ min: 1 }),
-  body('type').optional().isIn(['welcome', 'status']),
+  body('type').optional().isIn(['welcome', 'status', 'admin']),
   validate,
   adminController.retryRegistrantNotification
 );

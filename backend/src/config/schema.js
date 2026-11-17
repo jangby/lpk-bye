@@ -95,6 +95,8 @@ module.exports = [
     welcome_notification_error TEXT,
     status_notification_status VARCHAR(20) NOT NULL DEFAULT 'pending',
     status_notification_error TEXT,
+    admin_notification_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable',
+    admin_notification_error TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_registrants_portal_token_hash (portal_token_hash),

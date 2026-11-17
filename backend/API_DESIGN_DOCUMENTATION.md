@@ -229,6 +229,8 @@ Respons sukses `201`:
 
 `portal_url` adalah tautan rahasia unik peserta. Basis URL diatur lewat `FRONTEND_URL`. API hanya menyimpan hash token; tautan lengkap dikirim langsung kepada peserta. Jika pesan sambutan gagal dikirim, `notification.status` bernilai `failed`, tetapi pendaftaran tetap tersimpan dan tautan portal tetap ditampilkan.
 
+Setelah pendaftaran tersimpan, bot juga mengirim ringkasan pendaftar baru ke nomor pada `WHATSAPP_ADMIN_PHONES`. Status pengiriman dicatat terpisah dari pesan sambutan peserta dan dapat diperiksa atau dikirim ulang dari detail pendaftar di dashboard. Jawaban dinamis dan dokumen tidak disalin ke pesan admin; tautan dashboard mengarah ke detail lengkap.
+
 Respons error:
 
 ```json

@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { registrationCode, whatsappUrl, parseJson } = require('../utils/helpers');
 const { getWhatsAppStatus, sendWhatsAppMessage } = require('../services/whatsappBot');
+const { notifyAdminsOfRegistration } = require('../services/adminWhatsApp');
 const { buildWelcomeMessage } = require('../services/participantMessages');
 const { createPortalToken, hashPortalToken, getPortalUrl } = require('../utils/participantPortal');
 const { isBatchOpen } = require('../utils/batchPrograms');
@@ -122,8 +123,9 @@ exports.register = async (req, res, next) => {
       try {
         [result] = await connection.execute(
           `INSERT INTO registrants
-           (batch_id, program_type, training_fee, full_name, whatsapp, email, registration_code, portal_token_hash)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (batch_id, program_type, training_fee, full_name, whatsapp, email, registration_code,
+            portal_token_hash, admin_notification_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
           [
             batchId,
             batch.program_type,
@@ -181,6 +183,34 @@ exports.register = async (req, res, next) => {
       } catch (saveError) {
         console.error('Status pesan sambutan gagal disimpan:', saveError.message);
       }
+    }
+
+    let adminNotification = { status: 'failed', error: 'Pengiriman notifikasi belum berhasil.' };
+    try {
+      adminNotification = await notifyAdminsOfRegistration({
+        id: registrantId,
+        full_name: req.body.full_name.trim(),
+        registration_code: code,
+        program_type: batch.program_type,
+        batch_name: batch.batch_name,
+        whatsapp: req.body.whatsapp.trim(),
+        email: req.body.email,
+        training_fee: batch.training_fee
+      }, sendWhatsAppMessage);
+      if (adminNotification.status !== 'sent') {
+        console.error(`Notifikasi pendaftar baru ke WhatsApp admin: ${adminNotification.status}.`);
+      }
+    } catch (error) {
+      adminNotification = { status: 'failed', error: error.message };
+      console.error('Notifikasi pendaftar baru ke WhatsApp admin gagal:', error.message);
+    }
+    try {
+      await pool.execute(
+        'UPDATE registrants SET admin_notification_status = ?, admin_notification_error = ? WHERE id = ?',
+        [adminNotification.status, adminNotification.error || null, registrantId]
+      );
+    } catch (error) {
+      console.error('Status notifikasi admin gagal disimpan:', error.message);
     }
 
     const bot = getWhatsAppStatus();

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('../config/env');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
@@ -9,6 +9,8 @@ const { normalizePhone, resolveSenderPhone } = require('../utils/phone');
 const { recognizeTransfer } = require('../utils/paymentOcr');
 const { createPortalToken, hashPortalToken, getPortalUrl } = require('../utils/participantPortal');
 const { getBotCommand, getStatusLabel } = require('../utils/whatsappCommands');
+const { isAdminPhone, parseAdminCommand } = require('../utils/whatsappAdmin');
+const { sendAdminCommand } = require('./adminWhatsApp');
 
 const authDir = path.resolve(process.env.WHATSAPP_AUTH_DIR || '.whatsapp_auth');
 const receiptDir = path.resolve(process.env.PAYMENT_RECEIPT_DIR || 'private/payment-receipts');
@@ -105,6 +107,19 @@ function getRegistrationUrl() {
 }
 
 async function handleTextCommand(message, jid, text) {
+  const adminCommand = parseAdminCommand(text);
+  if (adminCommand) {
+    const senderPhone = await resolveSenderPhone(message, socket?.signalRepository?.lidMapping);
+    if (!isAdminPhone(senderPhone)) return;
+    try {
+      await sendAdminCommand(adminCommand, (reply) => sendChatText(jid, reply));
+    } catch (error) {
+      console.error('WhatsApp admin command failed:', error.message);
+      await sendChatText(jid, 'Data admin belum dapat dimuat. Silakan coba lagi atau buka dashboard admin.');
+    }
+    return;
+  }
+
   const command = getBotCommand(text);
   if (!command) return;
 

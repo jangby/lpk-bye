@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const { parseJson } = require('../utils/helpers');
 const { sendWhatsAppMessage } = require('../services/whatsappBot');
+const { notifyAdminsOfRegistration } = require('../services/adminWhatsApp');
 const { buildWelcomeMessage, buildStatusMessage } = require('../services/participantMessages');
 const { createPortalToken, hashPortalToken, getPortalUrl } = require('../utils/participantPortal');
 
@@ -30,6 +31,8 @@ exports.dashboard = async (req, res, next) => {
       (SELECT COUNT(*) FROM registrants) AS total_registrants,
       (SELECT COUNT(*) FROM registrants WHERE status = 'pending') AS pending_registrants,
       (SELECT COUNT(*) FROM payments WHERE status = 'pending') AS pending_payments,
+      (SELECT COUNT(*) FROM registrants
+        WHERE admin_notification_status IN ('pending', 'failed', 'partial', 'not_configured')) AS pending_admin_notifications,
       (SELECT COALESCE(SUM(amount_approved), 0) FROM payments WHERE status = 'approved') AS total_payments_received`);
     res.json({ success: true, data: counts });
   } catch (error) { next(error); }
@@ -147,7 +150,8 @@ exports.registrants = async (req, res, next) => {
       `SELECT r.id, r.batch_id, r.program_type, r.training_fee, b.batch_name, r.full_name, r.whatsapp, r.email,
        r.registration_code, r.status, r.notes, r.participant_feedback,
        r.welcome_notification_status, r.welcome_notification_error,
-       r.status_notification_status, r.status_notification_error, r.created_at, r.updated_at,
+       r.status_notification_status, r.status_notification_error,
+       r.admin_notification_status, r.admin_notification_error, r.created_at, r.updated_at,
        COALESCE((SELECT SUM(p.amount_approved) FROM payments p
          WHERE p.registrant_id = r.id AND p.status = 'approved'), 0) AS paid_total,
        GREATEST(r.training_fee - COALESCE((SELECT SUM(p.amount_approved) FROM payments p
@@ -261,6 +265,25 @@ exports.retryRegistrantNotification = async (req, res, next) => {
     );
     if (!registrant) {
       return res.status(404).json({ success: false, message: 'Pendaftar tidak ditemukan' });
+    }
+
+    if (type === 'admin') {
+      let notification;
+      try {
+        notification = await notifyAdminsOfRegistration(registrant, sendWhatsAppMessage);
+      } catch (error) {
+        notification = { status: 'failed', error: error.message };
+      }
+      await pool.execute(
+        'UPDATE registrants SET admin_notification_status = ?, admin_notification_error = ? WHERE id = ?',
+        [notification.status, notification.error || null, registrant.id]
+      );
+      const sent = notification.status === 'sent';
+      return res.status(sent ? 200 : 503).json({
+        success: sent,
+        message: sent ? 'Notifikasi WhatsApp admin berhasil dikirim' : 'Notifikasi WhatsApp admin gagal dikirim',
+        data: { notification }
+      });
     }
 
     let portalUrl = null;

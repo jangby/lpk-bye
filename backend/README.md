@@ -38,6 +38,23 @@ Baileys merupakan koneksi WhatsApp tidak resmi dan penggunaan berlebihan dapat m
 
 Backend memakai Baileys `7.0.0-rc14` untuk membaca nomor alternatif dan pemetaan LID dari pesan WhatsApp. Atur `FRONTEND_URL` pada `.env` ke alamat frontend yang digunakan agar tautan portal WhatsApp benar. Setelah memperbarui dependency atau `.env`, restart backend. Jika sesi lama tidak dapat tersambung, hapus sesi dari menu **Pembayaran**, lalu hubungkan kembali dengan QR; jangan hapus folder `.whatsapp_auth/` kecuali memang ingin mereset tautan secara manual.
 
+## Notifikasi dan perintah admin WhatsApp
+
+Atur `WHATSAPP_ADMIN_PHONES` di `backend/.env` dengan nomor WhatsApp admin dalam format kode negara, pisahkan beberapa nomor dengan koma (contoh format: `62xxxxxxxxxx,62yyyyyyyyyy`). Nomor ini menjadi daftar izin: hanya pengirim dari nomor tersebut yang dapat memakai perintah admin, dan semua nomor terdaftar menerima ringkasan pendaftar baru. Backend membaca file ini berdasarkan lokasi kode, bukan folder kerja terminal. Setelah mengubah `.env`, restart backend dan pastikan bot WhatsApp sudah terhubung.
+
+Pesan pendaftar baru mencakup nama, kode pendaftaran, program, gelombang, kontak, biaya, dan tautan langsung untuk review. Jawaban formulir dan dokumen tidak dikirim lewat WhatsApp; buka tautan detail di dashboard. Jika pengiriman gagal atau nomor admin belum diatur, status dan alasan kegagalan tercatat di detail pendaftar dan dapat dikirim ulang. Dashboard memperbarui jumlah pendaftar serta pembayaran menunggu review setiap menit.
+
+Kirim perintah berikut dari nomor admin yang diizinkan:
+
+- `ADMIN` - bantuan perintah admin
+- `ADMIN RINGKASAN` - total peserta, status pendaftaran, jumlah per program, pembayaran terverifikasi, dan bukti yang menunggu review
+- `ADMIN HARI INI` - pendaftaran baru dan pembayaran yang disetujui hari ini
+- `ADMIN PENDAFTAR` - hingga 10 pendaftar yang perlu direview
+- `ADMIN PEMBAYARAN` - hingga 10 bukti pembayaran yang perlu diperiksa
+- `ADMIN GELOMBANG` - jumlah pendaftar dan kuota gelombang aktif
+
+Nominal “pembayaran terverifikasi” hanya menjumlahkan transaksi yang sudah disetujui admin; bukti yang menunggu review ditampilkan terpisah sebagai perkiraan OCR. Setelah mengunduh pembaruan ini, jalankan `npm run migrate` di folder `backend` untuk menambahkan status notifikasi admin pada database.
+
 Jangan gunakan `localhost` pada `FRONTEND_URL` jika peserta membuka tautan dari ponsel. Gunakan domain frontend yang dapat diakses peserta; untuk uji jaringan lokal, gunakan alamat IP LAN komputer dan jalankan frontend dengan `npm run dev -- --host 0.0.0.0`.
 
 Foto bukti tersimpan privat di `private/payment-receipts/` dan hanya dapat dibuka melalui endpoint admin terautentikasi. Simpan/cadangkan folder tersebut bersama database.

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('../config/env');
 const statements = require('../config/schema');
 const { pool } = require('../config/database');
 const { PROGRAM_NAMES } = require('../utils/batchPrograms');
@@ -158,7 +158,9 @@ async function migrate() {
     ['welcome_notification_status', "VARCHAR(20) NOT NULL DEFAULT 'pending' AFTER participant_feedback"],
     ['welcome_notification_error', 'TEXT NULL AFTER welcome_notification_status'],
     ['status_notification_status', "VARCHAR(20) NOT NULL DEFAULT 'pending' AFTER welcome_notification_error"],
-    ['status_notification_error', 'TEXT NULL AFTER status_notification_status']
+    ['status_notification_error', 'TEXT NULL AFTER status_notification_status'],
+    ['admin_notification_status', "VARCHAR(20) NOT NULL DEFAULT 'not_applicable' AFTER status_notification_error"],
+    ['admin_notification_error', 'TEXT NULL AFTER admin_notification_status']
   ];
   for (const [name, definition] of registrantColumns) {
     const [column] = await pool.query(`SHOW COLUMNS FROM registrants LIKE '${name}'`);
