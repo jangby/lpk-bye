@@ -55,6 +55,30 @@ router.delete('/landing-slides/:slideId',
   validate,
   siteContentController.deleteSlide
 );
+router.post('/landing-gallery',
+  imageUpload.single('image'),
+  body('title').optional({ checkFalsy: true }).isLength({ max: 180 }),
+  body('caption').optional({ checkFalsy: true }).isLength({ max: 500 }),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.createGalleryItem
+);
+router.patch('/landing-gallery/:itemId',
+  param('itemId').isInt({ min: 1 }),
+  imageUpload.single('image'),
+  body('title').optional({ checkFalsy: true }).isLength({ max: 180 }),
+  body('caption').optional({ checkFalsy: true }).isLength({ max: 500 }),
+  body('sort_order').optional().isInt({ min: 0 }),
+  body('is_active').optional().isBoolean(),
+  validate,
+  siteContentController.updateGalleryItem
+);
+router.delete('/landing-gallery/:itemId',
+  param('itemId').isInt({ min: 1 }),
+  validate,
+  siteContentController.deleteGalleryItem
+);
 router.post('/landing-faqs',
   body('question').trim().isLength({ min: 5, max: 255 }),
   body('answer').trim().isLength({ min: 5, max: 5000 }),

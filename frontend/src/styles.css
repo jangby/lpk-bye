@@ -15,3 +15,12 @@ body { margin: 0; background: #fff; color: #1b2633; font-family: "Plus Jakarta S
   .card { @apply rounded-2xl border border-slate-100 bg-white shadow-card; }
   .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.16em] text-wine-600; }
 }
+
+.mobile-card-track {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-card-track::-webkit-scrollbar {
+  display: none;
+}

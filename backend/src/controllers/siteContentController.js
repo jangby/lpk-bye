@@ -23,6 +23,10 @@ async function getSiteContent(includeInactive) {
     `SELECT id, title, caption, image_url, link_url, sort_order, is_active
      FROM landing_slides ${activeClause} ORDER BY sort_order, id`
   );
+  const [gallery] = await pool.execute(
+    `SELECT id, title, caption, image_url, sort_order, is_active
+     FROM landing_gallery ${activeClause} ORDER BY sort_order, id`
+  );
   const [faqs] = await pool.execute(
     `SELECT id, question, answer, sort_order, is_active
      FROM landing_faqs ${activeClause} ORDER BY sort_order, id`
@@ -30,6 +34,7 @@ async function getSiteContent(includeInactive) {
   return {
     logo_url: settings[0]?.logo_url || null,
     slides,
+    gallery,
     faqs
   };
 }
@@ -114,6 +119,56 @@ exports.deleteSlide = async (req, res, next) => {
     const [result] = await pool.execute('DELETE FROM landing_slides WHERE id = ?', [req.params.slideId]);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Poster tidak ditemukan.' });
     res.json({ success: true, message: 'Poster berhasil dihapus.' });
+  } catch (error) { next(error); }
+};
+
+exports.createGalleryItem = async (req, res, next) => {
+  try {
+    if (!req.file) throw requestError('Pilih gambar galeri terlebih dahulu.', 422);
+    const [result] = await pool.execute(
+      `INSERT INTO landing_gallery (title, caption, image_url, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        req.body.title || null,
+        req.body.caption || null,
+        imageUrl(req.file),
+        Number(req.body.sort_order || 0),
+        req.body.is_active === undefined ? true : parseBoolean(req.body.is_active)
+      ]
+    );
+    res.status(201).json({ success: true, data: { id: result.insertId } });
+  } catch (error) { next(error); }
+};
+
+exports.updateGalleryItem = async (req, res, next) => {
+  try {
+    const [[item]] = await pool.execute('SELECT id FROM landing_gallery WHERE id = ?', [req.params.itemId]);
+    if (!item) return res.status(404).json({ success: false, message: 'Foto galeri tidak ditemukan.' });
+
+    const allowed = ['title', 'caption', 'sort_order', 'is_active'];
+    const entries = Object.entries(req.body).filter(([key]) => allowed.includes(key));
+    const updates = entries.map(([key, value]) => {
+      if (key === 'title' || key === 'caption') return [key, value || null];
+      if (key === 'sort_order') return [key, Number(value)];
+      if (key === 'is_active') return [key, parseBoolean(value)];
+      return [key, value];
+    });
+    if (req.file) updates.push(['image_url', imageUrl(req.file)]);
+    if (!updates.length) throw requestError('Tidak ada data foto galeri yang diperbarui.', 422);
+
+    await pool.execute(
+      `UPDATE landing_gallery SET ${updates.map(([key]) => `${key} = ?`).join(', ')} WHERE id = ?`,
+      [...updates.map(([, value]) => value), req.params.itemId]
+    );
+    res.json({ success: true, message: 'Foto galeri berhasil diperbarui.' });
+  } catch (error) { next(error); }
+};
+
+exports.deleteGalleryItem = async (req, res, next) => {
+  try {
+    const [result] = await pool.execute('DELETE FROM landing_gallery WHERE id = ?', [req.params.itemId]);
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Foto galeri tidak ditemukan.' });
+    res.json({ success: true, message: 'Foto galeri berhasil dihapus.' });
   } catch (error) { next(error); }
 };
 

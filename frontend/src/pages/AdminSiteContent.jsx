@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ArrowUpRight, CircleHelp, ImagePlus, LoaderCircle, Pencil, Plus, RotateCcw,
+  ArrowUpRight, CircleHelp, ImagePlus, Images, LoaderCircle, Pencil, Plus, RotateCcw,
   Save, Trash2, Upload, X
 } from 'lucide-react';
 import { adminApi } from '../api';
@@ -8,17 +8,19 @@ import { assetUrl } from '../utils/assets';
 
 const TABS = [
   { id: 'posters', label: 'Poster & banner', icon: ImagePlus },
+  { id: 'gallery', label: 'Galeri', icon: Images },
   { id: 'faqs', label: 'FAQ', icon: CircleHelp },
   { id: 'logo', label: 'Logo', icon: Upload }
 ];
 
 export default function AdminSiteContent() {
   const [activeTab, setActiveTab] = useState('posters');
-  const [content, setContent] = useState({ logo_url: null, slides: [], faqs: [] });
+  const [content, setContent] = useState({ logo_url: null, slides: [], gallery: [], faqs: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [slideEditor, setSlideEditor] = useState(null);
+  const [galleryEditor, setGalleryEditor] = useState(null);
   const [faqEditor, setFaqEditor] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [savingLogo, setSavingLogo] = useState(false);
@@ -72,12 +74,14 @@ export default function AdminSiteContent() {
 
   async function deleteItem(type, item) {
     const isSlide = type === 'slide';
-    const label = isSlide ? 'poster' : 'FAQ';
+    const isGallery = type === 'gallery';
+    const label = isSlide ? 'poster' : isGallery ? 'foto galeri' : 'FAQ';
     if (!confirm(`Hapus ${label} ini dari landing page?`)) return;
     setError('');
     setNotice('');
     try {
-      await adminApi(`/${isSlide ? 'landing-slides' : 'landing-faqs'}/${item.id}`, { method: 'DELETE' });
+      const endpoint = isSlide ? 'landing-slides' : isGallery ? 'landing-gallery' : 'landing-faqs';
+      await adminApi(`/${endpoint}/${item.id}`, { method: 'DELETE' });
       await loadContent();
       setNotice(`${label[0].toUpperCase()}${label.slice(1)} berhasil dihapus.`);
     } catch (requestError) {
@@ -88,6 +92,7 @@ export default function AdminSiteContent() {
   async function reloadAfterSave(message) {
     await loadContent();
     setSlideEditor(null);
+    setGalleryEditor(null);
     setFaqEditor(null);
     setError('');
     setNotice(message);
@@ -150,6 +155,28 @@ export default function AdminSiteContent() {
             </div>
           </article>)}
         </div> : <EmptyState title="Belum ada poster" text="Unggah banner promosi pertama untuk menghidupkan area utama landing page." action="Tambah poster" onAction={() => setSlideEditor({})}/>}
+      </section> : activeTab === 'gallery' ? <section className="mt-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div><p className="text-sm font-bold text-navy">{content.gallery.length} foto kegiatan</p><p className="mt-1 text-xs text-slate-500">Pilih foto terbaik untuk menampilkan suasana belajar dan kegiatan LPK BYE.</p></div>
+          <button type="button" onClick={() => setGalleryEditor({})} className="btn-primary"><Plus size={17}/>Tambah foto</button>
+        </div>
+        {content.gallery.length ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {content.gallery.map((item) => <article key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="relative aspect-[4/3] bg-slate-100">
+              <img src={assetUrl(item.image_url)} alt={item.title || 'Galeri kegiatan LPK BYE'} className="h-full w-full object-cover"/>
+              <span className={`absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-bold ${item.is_active ? 'bg-emerald-500 text-white' : 'bg-slate-900/70 text-white'}`}>{item.is_active ? 'Tampil' : 'Disembunyikan'}</span>
+              <span className="absolute bottom-3 right-3 rounded-lg bg-slate-950/65 px-2.5 py-1.5 text-[10px] font-semibold text-white">Urutan {item.sort_order}</span>
+            </div>
+            <div className="p-4">
+              <h3 className="font-bold text-navy">{item.title || 'Foto tanpa judul'}</h3>
+              <p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500">{item.caption || 'Tidak ada keterangan tambahan.'}</p>
+              <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                <button type="button" onClick={() => setGalleryEditor(item)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-wine-700 hover:bg-wine-50"><Pencil size={14}/>Ubah</button>
+                <button type="button" onClick={() => deleteItem('gallery', item)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50"><Trash2 size={14}/>Hapus</button>
+              </div>
+            </div>
+          </article>)}
+        </div> : <EmptyState title="Galeri masih kosong" text="Tambahkan foto kegiatan, kelas, atau momen peserta untuk ditampilkan di landing page." action="Tambah foto" onAction={() => setGalleryEditor({})}/>}
       </section> : activeTab === 'faqs' ? <section className="mt-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div><p className="text-sm font-bold text-navy">{content.faqs.length} pertanyaan</p><p className="mt-1 text-xs text-slate-500">Susun jawaban yang membantu calon peserta mengambil keputusan.</p></div>
@@ -185,6 +212,7 @@ export default function AdminSiteContent() {
       </section>}
 
     {slideEditor && <SlideEditor slide={slideEditor.id ? slideEditor : null} onClose={() => setSlideEditor(null)} onSaved={() => reloadAfterSave(slideEditor.id ? 'Poster berhasil diperbarui.' : 'Poster berhasil ditambahkan.')}/>}
+    {galleryEditor && <GalleryEditor item={galleryEditor.id ? galleryEditor : null} onClose={() => setGalleryEditor(null)} onSaved={() => reloadAfterSave(galleryEditor.id ? 'Foto galeri berhasil diperbarui.' : 'Foto galeri berhasil ditambahkan.')}/>}
     {faqEditor && <FaqEditor faq={faqEditor.id ? faqEditor : null} onClose={() => setFaqEditor(null)} onSaved={() => reloadAfterSave(faqEditor.id ? 'FAQ berhasil diperbarui.' : 'FAQ berhasil ditambahkan.')}/>}
   </div>;
 }
@@ -274,6 +302,70 @@ function SlideEditor({ slide, onClose, onSaved }) {
         <label className="flex items-center gap-2 self-end pb-3 text-sm font-semibold text-navy"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })}/>Tampilkan di landing page</label>
       </div>
       <ModalActions onClose={onClose} saving={saving} submitLabel={slide ? 'Simpan perubahan' : 'Tambah poster'}/>
+    </form>
+  </Modal>;
+}
+
+function GalleryEditor({ item, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    title: item?.title || '',
+    caption: item?.caption || '',
+    sort_order: item?.sort_order ?? 1,
+    is_active: item ? Boolean(item.is_active) : true
+  });
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(item?.image_url ? assetUrl(item.image_url) : '');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!image) {
+      setPreview(item?.image_url ? assetUrl(item.image_url) : '');
+      return undefined;
+    }
+    const url = URL.createObjectURL(image);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image, item?.image_url]);
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    const body = new FormData();
+    body.append('title', form.title.trim());
+    body.append('caption', form.caption.trim());
+    body.append('sort_order', String(Number(form.sort_order)));
+    body.append('is_active', String(form.is_active));
+    if (image) body.append('image', image);
+    try {
+      await adminApi(item ? `/landing-gallery/${item.id}` : '/landing-gallery', {
+        method: item ? 'PATCH' : 'POST',
+        body
+      });
+      await onSaved();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <Modal title={item ? 'Ubah foto galeri' : 'Tambah foto galeri'} onClose={onClose}>
+    <form onSubmit={submit} className="space-y-4">
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <label className="block text-sm font-semibold text-navy">Foto kegiatan {!item && <span className="text-wine-600">*</span>}
+        <input required={!item} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={(event) => setImage(event.target.files?.[0] || null)} className="mt-2 block w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-wine-50 file:px-3 file:py-2 file:font-semibold file:text-wine-700"/>
+        <span className="mt-1 block text-xs font-normal text-slate-400">JPG, PNG, atau WEBP · maks. 8 MB</span>
+      </label>
+      {preview && <img src={preview} alt="Pratinjau foto galeri" className="max-h-64 w-full rounded-xl bg-slate-100 object-cover"/>}
+      <label className="block text-sm font-semibold text-navy">Judul foto<input maxLength={180} className="input-field" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Contoh: Suasana kelas Bahasa Jepang"/></label>
+      <label className="block text-sm font-semibold text-navy">Keterangan<textarea maxLength={500} className="input-field min-h-20" value={form.caption} onChange={(event) => setForm({ ...form, caption: event.target.value })} placeholder="Keterangan singkat untuk foto (opsional)"/></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="text-sm font-semibold text-navy">Urutan tampil<input required min="0" type="number" className="input-field" value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: event.target.value })}/></label>
+        <label className="flex items-center gap-2 self-end pb-3 text-sm font-semibold text-navy"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })}/>Tampilkan di galeri</label>
+      </div>
+      <ModalActions onClose={onClose} saving={saving} submitLabel={item ? 'Simpan perubahan' : 'Tambah foto'}/>
     </form>
   </Modal>;
 }

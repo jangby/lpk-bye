@@ -63,7 +63,7 @@ Respons `200`:
 
 ### 2.2 Ambil Semua Gelombang Aktif dan Field Dinamis
 
-Setiap gelombang hanya terkait dengan satu program. Respons dapat memuat gelombang dari kedua program secara bersamaan.
+Setiap gelombang hanya terkait dengan satu program. Respons memuat semua gelombang yang status aktifnya dinyalakan admin dan belum melewati tanggal selesai, termasuk gelombang yang tanggal mulainya masih di masa depan. Admin menutup pendaftaran dengan menonaktifkan gelombang.
 
 ```text
 GET /api/public/batch-active
@@ -121,13 +121,15 @@ Konten publik landing page diambil dari endpoint berikut:
 GET /api/public/site-content
 ```
 
-Respons `data` berisi `logo_url`, `slides` aktif, dan FAQ aktif. Poster diurutkan dengan `sort_order` dan memiliki `image_url`, judul, keterangan, serta tautan opsional.
+Respons `data` berisi `logo_url`, `slides` aktif, foto `gallery` aktif, dan FAQ aktif. Poster dan galeri diurutkan dengan `sort_order`; poster memiliki tautan opsional.
 
 Endpoint berikut memerlukan autentikasi admin:
 
 | Method | Endpoint | Fungsi |
 |---|---|---|
 | `GET` | `/api/admin/site-content` | Memuat seluruh poster, FAQ, dan logo untuk admin |
+| `POST` | `/api/admin/landing-gallery` | Menambah foto galeri, multipart field `image` |
+| `PATCH` / `DELETE` | `/api/admin/landing-gallery/:itemId` | Mengubah atau menghapus foto galeri |
 | `PUT` | `/api/admin/site-content/logo` | Mengganti logo, multipart field `logo` |
 | `DELETE` | `/api/admin/site-content/logo` | Memulihkan logo bawaan |
 | `POST` | `/api/admin/landing-slides` | Menambah poster, multipart field `image` |

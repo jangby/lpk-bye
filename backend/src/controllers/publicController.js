@@ -3,6 +3,7 @@ const { registrationCode, whatsappUrl, parseJson } = require('../utils/helpers')
 const { getWhatsAppStatus, sendWhatsAppMessage } = require('../services/whatsappBot');
 const { buildWelcomeMessage } = require('../services/participantMessages');
 const { createPortalToken, hashPortalToken, getPortalUrl } = require('../utils/participantPortal');
+const { isBatchOpen } = require('../utils/batchPrograms');
 
 exports.health = async (req, res, next) => {
   try {
@@ -15,7 +16,7 @@ exports.activeBatch = async (req, res, next) => {
   try {
     const [batches] = await pool.execute(
       `SELECT id, batch_name, program_type, description, start_date, end_date, quota, training_fee, is_active
-       FROM batches WHERE is_active = TRUE AND CURDATE() BETWEEN start_date AND end_date
+       FROM batches WHERE is_active = TRUE AND end_date >= CURDATE()
        ORDER BY start_date DESC, created_at DESC`
     );
     if (!batches.length) return res.status(404).json({ success: false, message: 'Belum ada gelombang aktif' });
@@ -71,15 +72,15 @@ exports.register = async (req, res, next) => {
        FROM batches WHERE id = ? FOR UPDATE`,
       [batchId]
     );
-    if (!batch || !batch.is_active) {
+    if (!isBatchOpen(batch)) {
       throw Object.assign(new Error('Gelombang tidak tersedia untuk pendaftaran'), { status: 404 });
     }
-    const [[{ in_period }]] = await connection.execute(
-      'SELECT CURDATE() BETWEEN start_date AND end_date AS in_period FROM batches WHERE id = ?',
+    const [[{ before_batch_end }]] = await connection.execute(
+      'SELECT end_date >= CURDATE() AS before_batch_end FROM batches WHERE id = ?',
       [batchId]
     );
-    if (!in_period) {
-      throw Object.assign(new Error('Gelombang sudah selesai atau belum dibuka'), { status: 404 });
+    if (!before_batch_end) {
+      throw Object.assign(new Error('Gelombang sudah berakhir dan pendaftaran ditutup'), { status: 404 });
     }
     if (batch.training_fee == null) {
       throw Object.assign(new Error('Biaya gelombang ini belum ditetapkan'), { status: 409 });

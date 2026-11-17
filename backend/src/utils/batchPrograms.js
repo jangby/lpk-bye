@@ -3,4 +3,8 @@ const PROGRAM_NAMES = [
   'PELATIHAN BAHASA JEPANG'
 ];
 
-module.exports = { PROGRAM_NAMES };
+function isBatchOpen(batch) {
+  return batch?.is_active === true || Number(batch?.is_active) === 1;
+}
+
+module.exports = { PROGRAM_NAMES, isBatchOpen };
